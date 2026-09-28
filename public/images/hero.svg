@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="Bikalpa Shoes footwear">
+  <defs>
+    <linearGradient id="shoe" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c25a37"/>
+      <stop offset="100%" stop-color="#8a3724"/>
+    </linearGradient>
+  </defs>
+
+  <!-- High-top sneaker silhouette -->
+  <g transform="translate(70 120)">
+    <path d="M40 190c0-30 8-58 22-80l34-54c6-10 17-16 29-16h54c12 0 23 6 30 16l34 54c14 22 22 50 22 80v26c0 18-15 33-33 33H73c-18 0-33-15-33-33z"
+          fill="url(#shoe)" opacity="0.94"/>
+    <path d="M40 190h215v29c0 18-15 33-33 33H73c-18 0-33-15-33-33z" fill="#6f2f21"/>
+    <path d="M96 56l-20 44h60l14-44z" fill="#faf9f7" opacity="0.22"/>
+    <circle cx="128" cy="128" r="9" fill="#faf9f7" opacity="0.85"/>
+    <circle cx="160" cy="152" r="9" fill="#faf9f7" opacity="0.85"/>
+    <circle cx="128" cy="152" r="9" fill="#faf9f7" opacity="0.85"/>
+  </g>
+
+  <!-- Sandal -->
+  <g transform="translate(330 300) rotate(-12)">
+    <ellipse cx="90" cy="120" rx="88" ry="30" fill="#8a3724" opacity="0.9"/>
+    <ellipse cx="90" cy="112" rx="82" ry="26" fill="#a8452a"/>
+    <path d="M40 108c14-38 34-58 52-58s36 20 46 58" stroke="#faf9f7" stroke-width="13" fill="none" stroke-linecap="round" opacity="0.9"/>
+    <path d="M56 92c10-22 22-32 34-32s22 10 28 32" stroke="#faf9f7" stroke-width="11" fill="none" stroke-linecap="round" opacity="0.75"/>
+  </g>
+
+  <!-- Slip-on loafer -->
+  <g transform="translate(300 90) rotate(8)">
+    <path d="M20 96c0-16 8-30 22-40 20-14 46-22 74-22s50 8 68 22c12 10 18 24 18 40v16c0 12-10 22-22 22H42c-12 0-22-10-22-22z" fill="#4a6b7c"/>
+    <path d="M42 70c16-12 42-20 74-20s56 8 72 20c-14 8-42 13-72 13s-60-5-74-13z" fill="#2f4551"/>
+    <path d="M80 60c8-8 24-8 32 0" stroke="#faf9f7" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.9"/>
+  </g>
+
+  <!-- Ground line -->
+  <path d="M60 470h480" stroke="#ddd6cc" stroke-width="6" stroke-linecap="round"/>
+</svg>

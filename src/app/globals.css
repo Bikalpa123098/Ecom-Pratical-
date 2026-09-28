@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Warm, premium palette. */
+  --color-ink: #1c1917;
+  --color-ink-soft: #57534e;
+  --color-muted: #8b8378;
+  --color-paper: #faf9f7;
+  --color-surface: #ffffff;
+  --color-line: #ece7e0;
+  --color-line-strong: #ddd6cc;
+
+  /* Brand: deep terracotta, drawn from Kathmandu's brick and clay. */
+  --color-brand-50: #fdf4f1;
+  --color-brand-100: #fae5dd;
+  --color-brand-200: #f3cabb;
+  --color-brand-300: #e9a68d;
+  --color-brand-400: #d97c5c;
+  --color-brand-500: #c25a37;
+  --color-brand-600: #a8452a;
+  --color-brand-700: #8a3724;
+  --color-brand-800: #6f2f21;
+  --color-brand-900: #5c2a1f;
+
+  /* Accent: Himalayan slate. */
+  --color-accent-500: #4a6b7c;
+  --color-accent-600: #3b5766;
+  --color-accent-700: #2f4551;
+
+  --color-success-50: #f0fdf4;
+  --color-success-500: #16a34a;
+  --color-success-700: #15803d;
+  --color-warning-50: #fffbeb;
+  --color-warning-500: #d97706;
+  --color-warning-700: #b45309;
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  --font-sans: var(--font-sans-face), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), Georgia, "Times New Roman", serif;
+
+  --shadow-soft: 0 1px 2px rgb(28 25 23 / 0.04), 0 6px 20px -10px rgb(28 25 23 / 0.14);
+  --shadow-lift: 0 2px 4px rgb(28 25 23 / 0.04), 0 14px 34px -14px rgb(28 25 23 / 0.24);
+  --shadow-drawer: -12px 0 40px -16px rgb(28 25 23 / 0.28);
+
+  --animate-fade-in: fade-in 0.22s ease-out;
+  --animate-slide-up: slide-up 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-scale-in: scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-drawer-in: drawer-in 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes drawer-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "bikalpa-shoes",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "db:push": "prisma db push --skip-generate",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "seed": "tsx prisma/seed.ts",
+    "gen:images": "node scripts/generate-placeholder-images.mjs",
+    "mongo:up": "docker compose up -d",
+    "mongo:down": "docker compose down"
+  },
+  "dependencies": {
+    "@better-auth/prisma-adapter": "^1.7.6",
+    "@prisma/client": "^6.19.3",
+    "better-auth": "^1.7.6",
+    "lucide-react": "^0.552.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sonner": "^2.0.8",
+    "zod": "^4.6.2",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^24.13.4",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "prisma": "^6.19.3",
+    "server-only": "^0.0.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "vite": "^7.1.0",
+    "vitest": "^5.0.0"
+  }
+}

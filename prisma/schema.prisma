@@ -1,0 +1,513 @@
+// Bikalpa Shoes — Prisma schema (MongoDB)
+//
+// NOTE ON ENUMS: MongoDB has no native enum support and Prisma does not
+// implement `enum` for this connector. Every status/role field is therefore a
+// `String` constrained by a TypeScript union + constant map in
+// `src/lib/constants.ts`. Never assign a raw string to these fields.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  passwordHash  String?
+  phone         String?
+  // "CUSTOMER" | "ADMIN" — see UserRole
+  role          String   @default("CUSTOMER")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions    Session[]
+  accounts    Account[]
+  cart        Cart?
+  wishlist    Wishlist?
+  addresses   Address[]
+  orders      Order[]
+  reviews     Review[]
+
+  @@index([role])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Session {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue
+// ---------------------------------------------------------------------------
+
+model Category {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String   @unique
+  description String?
+  image       String?
+  // "SHOES" | "SANDALS" | "SLIPPERS" | "BOOTS" | "ACCESSORIES"
+  kind        String   @default("SHOES")
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+
+  @@index([isActive, sortOrder])
+  @@map("categories")
+}
+
+model Brand {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  slug      String   @unique
+  logo      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@index([isActive])
+  @@map("brands")
+}
+
+model Product {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  slug             String   @unique
+  sku              String   @unique
+  description      String
+  shortDescription String?
+
+  // All money is stored in PAISA (1 NPR = 100 paisa) as integers to avoid
+  // floating point drift. `discountPrice` is the price actually charged.
+  price            Int
+  discountPrice    Int?
+  // Snapshot of the discount at the time of purchase, mirrored on OrderItem.
+  compareAtPrice   Int?
+
+  // Denormalised `discountPrice ?? price`. MongoDB cannot sort or range-filter
+  // on a computed field, and "sort by effective price" is wrong when nulls sort
+  // ahead of real values. Every write path that touches price or discountPrice
+  // MUST set this in the same update, or listings will order incorrectly.
+  sortPrice Int @default(0)
+
+  images           String[]
+  // "MEN" | "WOMEN" | "UNISEX" | "KIDS" — see Gender
+  gender           String
+  colorName        String?
+  colorHex         String?
+  material         String?
+  tags             String[]
+
+  // "ACTIVE" | "DRAFT" | "ARCHIVED" — see ProductStatus
+  status           String   @default("ACTIVE")
+  featured         Boolean  @default(false)
+
+  // Denormalised total stock across all ProductSize rows. Kept in sync inside
+  // the same atomic update as the size rows so listings can filter cheaply.
+  totalStock       Int      @default(0)
+  soldCount        Int      @default(0)
+  viewCount        Int      @default(0)
+  ratingAverage    Float    @default(0)
+  ratingCount      Int      @default(0)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  brandId     String
+  brand       Brand     @relation(fields: [brandId], references: [id])
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  sizes       ProductSize[]
+  images_rel  ProductImage[]
+  cartItems   CartItem[]
+  wishlistItems WishlistItem[]
+  orderItems  OrderItem[]
+  reviews     Review[]
+
+  @@index([status, featured])
+  @@index([categoryId, status])
+  @@index([brandId])
+  @@index([gender])
+  @@index([price])
+  @@index([createdAt])
+  @@index([totalStock])
+  @@map("products")
+}
+
+// Per-size stock. Stock is decremented atomically with a conditional update so
+// concurrent checkouts cannot oversell — see src/server/services/order.ts.
+model ProductSize {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  size      String
+  stock     Int      @default(0)
+  // Units permanently removed, e.g. a sold-out size. Blocks re-adding by admins.
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, size])
+  @@index([productId, isActive])
+  @@map("product_sizes")
+}
+
+model ProductImage {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+  @@map("product_images")
+}
+
+model Review {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  rating    Int
+  title     String?
+  body      String?
+  isVerified Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@map("reviews")
+}
+
+// ---------------------------------------------------------------------------
+// Cart & Wishlist
+// ---------------------------------------------------------------------------
+
+// A cart belongs to either a signed-in user (userId) or an anonymous browser
+// (guestToken, an httpOnly cookie value). Exactly one is set.
+model Cart {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @unique
+  guestToken String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  // @unique on userId/guestToken already creates the needed indexes.
+  @@map("carts")
+}
+
+model CartItem {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  size      String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId, size])
+  @@index([cartId])
+  @@index([productId])
+  @@map("cart_items")
+}
+
+model Wishlist {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items WishlistItem[]
+
+  @@map("wishlists")
+}
+
+model WishlistItem {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @default(now())
+
+  wishlistId String
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, productId])
+  @@index([productId])
+  @@map("wishlist_items")
+}
+
+// ---------------------------------------------------------------------------
+// Addresses
+// ---------------------------------------------------------------------------
+
+model Address {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  label         String   @default("Home")
+  fullName      String
+  phone         String
+  email         String?
+  province      String
+  district      String
+  municipality  String
+  wardNumber    String?
+  tole          String?
+  addressLine   String
+  postalCode    String?
+  deliveryNotes String?
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDefault])
+  @@map("addresses")
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+model Order {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber String @unique
+
+  // "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED"
+  // | "CANCELED" | "PAYMENT_FAILED" | "REFUNDED" — see OrderStatus
+  status String @default("PENDING_PAYMENT")
+
+  // Denormalised payment mirror for cheap admin filtering. The authoritative
+  // record is the related Payment row.
+  // "PENDING" | "PAID" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED"
+  // | "AMBIGUOUS" | "CANCELED"
+  paymentStatus String @default("PENDING")
+
+  // All amounts in paisa.
+  subtotal       Int
+  discount       Int @default(0)
+  deliveryCharge Int @default(0)
+  taxAmount      Int @default(0)
+  serviceCharge  Int @default(0)
+  total          Int
+  currency       String @default("NPR")
+
+  // Billing/contact snapshot — copied at checkout so later profile edits never
+  // rewrite order history.
+  customerName String
+  email        String
+  phone        String
+
+  province     String
+  district     String
+  municipality String
+  wardNumber   String?
+  tole         String?
+  addressLine  String
+  postalCode   String?
+  deliveryNotes String?
+
+  // Guards against double-submitting checkout and double-processing a callback.
+  idempotencyKey String? @unique
+
+  // Set exactly once, by the atomic claim in `releaseOrderStock`. Without it a
+  // replayed eSewa failure callback (or a cancel after a release) would return
+  // the same stock to the shelf a second time and inflate `totalStock`.
+  //
+  // A defaulted boolean rather than a nullable timestamp: the claim filters on
+  // `stockReleased: false`, and Prisma's MongoDB translation of
+  // `field: null` does not match a document where the field is simply absent,
+  // which would make the claim silently never succeed on a fresh order.
+  stockReleased   Boolean   @default(false)
+  stockReleasedAt DateTime?
+
+  // Guest orders are addressed by the order id in the URL, which alone is too
+  // weak a capability. A high-entropy token is stored in an httpOnly cookie and
+  // compared with a constant-time check before any guest order is shown.
+  guestAccessToken String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  paidAt     DateTime?
+  shippedAt  DateTime?
+  deliveredAt DateTime?
+  canceledAt DateTime?
+
+  // Admin-only, never shown to the customer. Lets support record a reason for a
+  // status change without putting it in front of the shopper.
+  internalNote String?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  items   OrderItem[]
+  payment Payment?
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@index([guestAccessToken])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @default(now())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // SetNull: a deleted product must not erase the purchased line item.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // Product snapshot — the catalogue may change long after the sale.
+  productName String
+  productSlug String
+  productSku  String
+  image       String?
+  size        String
+  colorName   String?
+
+  // paisa
+  unitPrice  Int
+  unitMrp    Int
+  quantity   Int
+  lineTotal  Int
+  discount   Int @default(0)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// ---------------------------------------------------------------------------
+// Payments
+// ---------------------------------------------------------------------------
+
+// One order has at most one payment row. NEVER store the eSewa signing secret,
+// the UAT/production secret key, or any merchant credential here — only the
+// non-sensitive gateway metadata needed for reconciliation and support.
+model Payment {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  provider String @default("ESEWA")
+
+  // Our unique id for one payment attempt. Alphanumeric + hyphen only, because
+  // eSewa's transaction_uuid contract forbids other characters.
+  transactionUuid String @unique
+
+  // eSewa's own identifiers, learned from the verified callback or status API.
+  transactionCode String?
+  refId           String?
+
+  // paisa
+  amount Int
+
+  // "PENDING" | "COMPLETE" | "FAILED" | "AMBIGUOUS" | "NOT_FOUND"
+  // | "CANCELED" | "FULL_REFUND" | "PARTIAL_REFUND" | "REFUNDED" | "EXPIRED"
+  status String @default("PENDING")
+
+  // eSewa `status` string exactly as last seen, for audit/debugging.
+  gatewayStatus String?
+
+  // Which environment produced this payment: "TEST" | "PRODUCTION".
+  environment String @default("TEST")
+
+  // Audit trail. `requestSignature` is the HMAC we generated (safe to log — it
+  // is a MAC, not the key). The secret key itself is never persisted.
+  requestSignature  String?
+  signedFieldNames String?
+  responsePayload  String?
+  failureReason    String?
+  statusChecks     Int     @default(0)
+  lastCheckedAt    DateTime?
+  verifiedAt       DateTime?
+  paidAt           DateTime?
+
+  @@index([status])
+  @@index([transactionCode])
+  @@index([createdAt])
+  @@map("payments")
+}
